@@ -8,8 +8,11 @@ The project fetches hourly BTCUSDT bars from Binance Vision, runs a no-peeking b
 
 - Uses hourly close-to-close log returns.
 - Estimates volatility only from bars that are available before each target bar.
-- Uses a GBM-style log-return forecast with Student-t shocks normalized to unit variance.
-- Calibrates lookback, Student-t degrees of freedom, and interval scale to target 95% coverage.
+- Supports rolling, EWMA, GARCH(1,1), and weighted ensemble volatility estimates.
+- Detects low/medium/high volatility regimes and adjusts tail thickness and scale by regime.
+- Supports Student-t, normal, mixture, and historical shock distributions.
+- Includes optional online conformal interval widening from previously resolved predictions.
+- Calibrates lookback, tail degrees of freedom, volatility model, distribution, and interval scale to target 95% coverage.
 - Keeps `drift = 0.0` for the one-hour forecast.
 
 ## Run Backtest
@@ -48,6 +51,20 @@ src/                    Core forecasting, backtest, calibration, and evaluation 
 dashboard/app.py         Streamlit app
 scripts/run_backtest.py  Backtest CLI
 config/default_config.py Calibrated config loader
+config/model_config.yaml Human-readable model configuration
 data/                    Generated copies of backtest artifacts
 tests/                   Unit tests
 ```
+
+## Methodology
+
+The forecast is intentionally explainable:
+
+1. Compute historical hourly log returns without using the target bar.
+2. Estimate next-hour volatility from the configured model.
+3. Classify the current volatility regime relative to recent rolling volatility.
+4. Draw interval quantiles from the configured shock distribution.
+5. Convert log-return quantiles back to BTCUSDT price bounds.
+6. Optionally widen bounds using online conformal scores from previous resolved bars.
+
+Heavy ML models, cross-asset data, and API/Docker production layers are left as documented extensions so the competition submission stays lightweight and easy to deploy.

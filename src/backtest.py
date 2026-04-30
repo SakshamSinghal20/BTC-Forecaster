@@ -12,9 +12,17 @@ from src.evaluation import evaluate
 from src.prediction import ForecastConfig, as_forecast_config, predict_price_range
 
 
-DEFAULT_LOOKBACKS = (24, 36, 48, 72, 120, 168, 240)
-DEFAULT_DFS = (4.0, 5.0, 7.0, 10.0)
-DEFAULT_INTERVAL_SCALES = tuple(round(value, 2) for value in np.arange(0.70, 2.51, 0.05))
+DEFAULT_LOOKBACKS = (72, 120, 168, 240)
+DEFAULT_DFS = (4.0, 5.0, 7.0)
+DEFAULT_INTERVAL_SCALES = tuple(round(value, 2) for value in np.arange(0.85, 1.26, 0.05))
+DEFAULT_MODEL_PAIRS = (
+    ("rolling", "student_t"),
+    ("ewma", "student_t"),
+    ("garch", "student_t"),
+    ("ensemble", "student_t"),
+    ("ensemble", "mixture"),
+    ("rolling", "historical"),
+)
 
 
 def extract_close_prices(data: pd.DataFrame | Iterable[float] | np.ndarray) -> np.ndarray:
@@ -65,16 +73,26 @@ def run_backtest(
     prices = extract_close_prices(data)
 
     predictions: list[dict[str, Any]] = []
+    conformity_scores: list[float] = []
     for target_index, historical, actual in iter_backtest_windows(
         prices,
         target_count=target_count,
         lookback=cfg.lookback,
     ):
         interval = predict_price_range(historical, cfg)
+        base_lower = float(interval["lower"])
+        base_upper = float(interval["upper"])
+        conformal_adjustment = 0.0
+        if cfg.conformal_enabled and len(conformity_scores) >= cfg.conformal_min_history:
+            conformal_adjustment = float(
+                np.quantile(conformity_scores, 1 - float(cfg.conformal_alpha))
+            )
+        lower = base_lower - max(conformal_adjustment, 0.0)
+        upper = base_upper + max(conformal_adjustment, 0.0)
         row: dict[str, Any] = {
             "actual": float(actual),
-            "lower": float(interval["lower"]),
-            "upper": float(interval["upper"]),
+            "lower": float(lower),
+            "upper": float(upper),
         }
         if include_metadata:
             row.update(
@@ -83,11 +101,50 @@ def run_backtest(
                     "as_of_index": int(target_index - 1),
                     "history_count": int(len(historical)),
                     "volatility": float(interval["volatility"]),
+                    "rolling_volatility": float(interval["rolling_volatility"]),
+                    "ewma_volatility": float(interval["ewma_volatility"]),
+                    "garch_volatility": float(interval["garch_volatility"]),
+                    "regime": str(interval["regime"]),
+                    "volatility_model": str(interval["volatility_model"]),
+                    "distribution": str(interval["distribution"]),
+                    "distribution_df": float(interval["distribution_df"]),
+                    "conformal_adjustment": float(conformal_adjustment),
                 }
             )
         predictions.append(row)
+        conformity_scores.append(max(base_lower - float(actual), float(actual) - base_upper, 0.0))
 
     return predictions
+
+
+def estimate_conformal_adjustment(
+    data: pd.DataFrame | Iterable[float] | np.ndarray,
+    config: ForecastConfig | dict[str, Any] | None = None,
+    calibration_count: int = 120,
+) -> float:
+    """Estimate an online conformal additive adjustment from recent resolved bars."""
+    cfg = as_forecast_config(config)
+    prices = extract_close_prices(data)
+    if len(prices) < cfg.lookback + cfg.conformal_min_history + 2:
+        return 0.0
+
+    target_count = min(calibration_count, len(prices) - cfg.lookback - 1)
+    target_start = len(prices) - target_count
+    scores: list[float] = []
+    for target_index in range(target_start, len(prices)):
+        historical = prices[:target_index]
+        actual = float(prices[target_index])
+        interval = predict_price_range(historical, cfg)
+        scores.append(
+            max(
+                float(interval["lower"]) - actual,
+                actual - float(interval["upper"]),
+                0.0,
+            )
+        )
+    if len(scores) < cfg.conformal_min_history:
+        return 0.0
+    return float(max(np.quantile(scores, 1 - float(cfg.conformal_alpha)), 0.0))
 
 
 def candidate_configs(
@@ -99,6 +156,27 @@ def candidate_configs(
     for lookback in DEFAULT_LOOKBACKS:
         for df in DEFAULT_DFS:
             for interval_scale in DEFAULT_INTERVAL_SCALES:
+                for volatility_model, distribution in DEFAULT_MODEL_PAIRS:
+                    configs.append(
+                        ForecastConfig(
+                            lookback=lookback,
+                            df=df,
+                            interval_scale=interval_scale,
+                            num_simulations=num_simulations,
+                            confidence=confidence,
+                            seed=seed,
+                            volatility_model=volatility_model,
+                            distribution=distribution,
+                            ewma_span=lookback,
+                            historical_lookback=max(lookback, 120),
+                        )
+                    )
+
+    # A small conformal pass keeps the guarantee-style interval option available
+    # without doubling the full search space.
+    for lookback in (72, 168, 240):
+        for df in (5.0, 7.0):
+            for interval_scale in (0.9, 1.0, 1.1):
                 configs.append(
                     ForecastConfig(
                         lookback=lookback,
@@ -107,6 +185,10 @@ def candidate_configs(
                         num_simulations=num_simulations,
                         confidence=confidence,
                         seed=seed,
+                        volatility_model="ensemble",
+                        distribution="student_t",
+                        ewma_span=lookback,
+                        conformal_enabled=True,
                     )
                 )
     return configs
@@ -173,4 +255,3 @@ def save_predictions_jsonl(predictions: Iterable[dict[str, Any]], path: str | Pa
                 "upper": float(prediction["upper"]),
             }
             handle.write(json.dumps(row, separators=(",", ":")) + "\n")
-

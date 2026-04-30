@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from time import sleep
 from typing import Final
@@ -9,6 +10,7 @@ import requests
 
 
 BINANCE_VISION_KLINES_URL: Final[str] = "https://data-api.binance.vision/api/v3/klines"
+LOGGER = logging.getLogger(__name__)
 
 
 def fetch_btcusdt_bars(
@@ -37,7 +39,9 @@ def fetch_btcusdt_bars(
         except requests.RequestException as exc:
             last_error = exc
             if attempt == retries:
+                LOGGER.error("Binance Vision request failed after %s attempts", retries + 1)
                 raise
+            LOGGER.warning("Binance Vision request failed, retrying: %s", exc)
             sleep(0.8 * (attempt + 1))
     else:
         raise RuntimeError("Failed to fetch Binance Vision data") from last_error

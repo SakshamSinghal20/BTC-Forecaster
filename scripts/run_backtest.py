@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,8 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.backtest import calibrate_config, save_predictions_jsonl
+from src.backtest import calibrate_config, run_backtest, save_predictions_jsonl
 from src.data_fetch import BINANCE_VISION_KLINES_URL, fetch_btcusdt_bars
+from src.evaluation import evaluate, evaluate_by_group
+
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+LOGGER = logging.getLogger("btc_forecaster.backtest")
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,11 +34,24 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
+    LOGGER.info("Fetching BTCUSDT hourly bars from Binance Vision")
     df = fetch_btcusdt_bars(limit=args.limit, api_url=BINANCE_VISION_KLINES_URL)
-    best_config, metrics, predictions, calibration_rows = calibrate_config(
+    LOGGER.info("Fetched %s closed bars", len(df))
+
+    LOGGER.info("Calibrating model search space")
+    best_config, _, _, calibration_rows = calibrate_config(
         df,
         target_count=args.target_count,
     )
+    LOGGER.info("Running final backtest with metadata")
+    predictions = run_backtest(
+        df,
+        target_count=args.target_count,
+        config=best_config,
+        include_metadata=True,
+    )
+    metrics = evaluate(predictions)
+    conditional_metrics = evaluate_by_group(predictions, group_key="regime")
 
     args.data_dir.mkdir(exist_ok=True)
 
@@ -49,6 +68,7 @@ def main() -> int:
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "api_url": BINANCE_VISION_KLINES_URL,
         "config": best_config.to_dict(),
+        "conditional_coverage": conditional_metrics,
         "top_calibration_rows": calibration_rows[:10],
     }
     metrics_text = json.dumps(payload, indent=2)
