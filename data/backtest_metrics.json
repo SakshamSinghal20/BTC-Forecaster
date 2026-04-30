@@ -1,0 +1,172 @@
+{
+  "coverage": 0.95,
+  "mean_width": 1206.7396659350939,
+  "mean_winkler": 1712.6898446153539,
+  "prediction_count": 720,
+  "rows_fetched": 999,
+  "data_start_utc": "2026-03-20T02:00:00+00:00",
+  "data_end_utc": "2026-04-30T16:59:59.999000+00:00",
+  "generated_at_utc": "2026-04-30T17:48:47.866820+00:00",
+  "api_url": "https://data-api.binance.vision/api/v3/klines",
+  "config": {
+    "lookback": 168,
+    "df": 7.0,
+    "interval_scale": 1.0,
+    "num_simulations": 10000,
+    "confidence": 0.95,
+    "seed": 42,
+    "min_sigma": 1e-08
+  },
+  "top_calibration_rows": [
+    {
+      "coverage": 0.95,
+      "mean_width": 1206.7396659350939,
+      "mean_winkler": 1712.6898446153539,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 168,
+        "df": 7.0,
+        "interval_scale": 1.0,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1202.3318160320518,
+      "mean_winkler": 1714.9598062043208,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 168,
+        "df": 5.0,
+        "interval_scale": 1.0,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1246.6486920687084,
+      "mean_winkler": 1771.5199654095002,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 120,
+        "df": 10.0,
+        "interval_scale": 1.05,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1235.944212813815,
+      "mean_winkler": 1775.3723267945668,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 72,
+        "df": 7.0,
+        "interval_scale": 1.05,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1275.6402274731552,
+      "mean_winkler": 1785.8015590355951,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 48,
+        "df": 7.0,
+        "interval_scale": 1.1,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1270.971707366954,
+      "mean_winkler": 1787.9249568041007,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 48,
+        "df": 5.0,
+        "interval_scale": 1.1,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1285.8470039228864,
+      "mean_winkler": 1789.6113784222136,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 48,
+        "df": 4.0,
+        "interval_scale": 1.15,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.95,
+      "mean_width": 1269.9261360726869,
+      "mean_winkler": 1791.056417302132,
+      "coverage_error": 0.0,
+      "config": {
+        "lookback": 48,
+        "df": 10.0,
+        "interval_scale": 1.1,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.9486111111111111,
+      "mean_width": 1184.9461388845803,
+      "mean_winkler": 1694.634017499669,
+      "coverage_error": 0.001388888888888884,
+      "config": {
+        "lookback": 240,
+        "df": 4.0,
+        "interval_scale": 1.0,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    },
+    {
+      "coverage": 0.9513888888888888,
+      "mean_width": 1221.6910050700085,
+      "mean_winkler": 1715.20763470047,
+      "coverage_error": 0.001388888888888884,
+      "config": {
+        "lookback": 168,
+        "df": 4.0,
+        "interval_scale": 1.05,
+        "num_simulations": 10000,
+        "confidence": 0.95,
+        "seed": 42,
+        "min_sigma": 1e-08
+      }
+    }
+  ]
+}
