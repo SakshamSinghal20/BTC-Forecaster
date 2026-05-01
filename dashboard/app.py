@@ -51,7 +51,7 @@ def config_from_metrics(metrics: dict) -> ForecastConfig:
 
 
 def build_price_chart(df: pd.DataFrame, lower: float, upper: float) -> go.Figure:
-    recent = df.tail(50).copy()
+    recent = df.tail(50).reset_index(drop=True).copy()
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
