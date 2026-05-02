@@ -1,64 +1,79 @@
-# BTC Forecaster
+# ₿ BTC Forecaster
 
-## Overview
+**Live Dashboard →** [btc-forecasterr.streamlit.app](https://btc-forecasterr.streamlit.app/)
 
-This project implements a robust Bitcoin (BTCUSDT) price forecasting system designed to predict 95% confidence intervals for the next hourly price. Developed for the AlphaI / Polaris Bitcoin Price Prediction challenge, it features a comprehensive backtesting framework and a live Streamlit dashboard for real-time predictions and performance monitoring.
+A Bitcoin (BTCUSDT) price forecasting system that predicts 95% confidence intervals for the next hourly price. Built for the **AlphaI × Polaris Bitcoin Price Prediction Challenge**.
 
-The system is built to address key challenges in financial forecasting, including volatility clustering and fat-tailed distributions, ensuring both accuracy and tightness of prediction intervals.
+## Backtest Results
+
+| Metric | Value |
+|---|---|
+| **Coverage** | 95.00% (target: 95%) |
+| **Mean Width** | $1,227.99 |
+| **Winkler Score** | 1,698.27 |
+| **Predictions** | 720 hourly bars |
+| **Best Config** | GARCH(1,1) + Student-t (df=7) + regime detection |
 
 ## Key Features
 
--   **Data Acquisition:** Fetches historical BTCUSDT hourly bars from the Binance Vision API, ensuring reliable and up-to-date market data.
--   **Advanced Volatility Modeling:** Employs multiple volatility estimation techniques, including:
+-   **Data Acquisition:** Fetches historical BTCUSDT hourly bars from the Binance Vision API (`data-api.binance.vision`), the geo-unblocked endpoint that works in India without any API key.
+-   **Advanced Volatility Modeling:** Employs multiple volatility estimation techniques:
     -   **Rolling Volatility:** Standard deviation of log returns over a defined lookback window.
-    -   **Exponentially Weighted Moving Average (EWMA):** Provides more weight to recent observations for adaptive volatility estimation.
-    -   **Generalized Autoregressive Conditional Heteroskedasticity (GARCH(1,1)):** Models time-varying volatility based on past squared returns and past volatility.
-    -   **Ensemble Volatility:** A weighted combination of the above models for a more robust estimate.
--   **Volatility Regime Detection:** Dynamically classifies market conditions into low, medium, or high volatility regimes, adjusting model parameters (e.g., Student-t degrees of freedom and interval scaling) accordingly to enhance prediction accuracy.
--   **Fat-Tailed Distribution Handling:** Utilizes Student-t, normal, mixture, and historical shock distributions to accurately capture the fat-tailed nature of cryptocurrency returns, which is crucial for realistic interval predictions.
--   **Geometric Brownian Motion (GBM) Simulation:** Employs Monte Carlo simulations based on GBM to generate a distribution of possible future prices, from which prediction intervals are derived.
--   **No-Peeking Backtesting:** A rigorous backtesting framework ensures that predictions for each historical bar are made using only data available *prior* to that bar, preventing lookahead bias and providing a realistic assessment of model performance over 720 hourly bars.
--   **Conformal Prediction (Optional):** Incorporates an online conformal prediction mechanism to dynamically adjust prediction intervals based on the model\'s recent performance, further improving coverage reliability.
--   **Automated Calibration:** Optimizes model hyperparameters (lookback periods, Student-t degrees of freedom, interval scaling, volatility models, and distributions) through a grid search, targeting 95% coverage while minimizing the Winkler score.
--   **Comprehensive Evaluation Metrics:** Tracks and reports key performance indicators including:
-    -   **Coverage:** The percentage of actual prices falling within the predicted interval (target: 95%).
-    -   **Mean Width:** The average width of the prediction intervals (narrower is better for a given coverage).
-    -   **Winkler Score:** A combined metric that penalizes both interval width and misses, providing a holistic measure of forecast quality.
--   **Live Streamlit Dashboard:** A user-friendly web interface displaying:
-    -   Current BTCUSDT price.
-    -   Next-hour 95% prediction range.
-    -   Percentage deviation of the prediction range from the current price.
-    -   Interactive chart of recent price history with the prediction ribbon.
-    -   Summary of backtest metrics (Coverage, Mean Width, Winkler Score).
-    -   Detailed run information, including volatility breakdown, regime classification, and model configuration.
+    -   **EWMA:** Exponentially weighted moving average — recent bars carry more weight.
+    -   **GARCH(1,1):** Models time-varying volatility using past squared returns and past variance.
+    -   **Ensemble:** Weighted combination of all three (0.35 rolling, 0.35 EWMA, 0.30 GARCH).
+-   **Volatility Regime Detection:** Classifies the current market into low, medium, or high volatility regimes by comparing recent return intensity against historical percentiles. The regime dynamically adjusts:
+    -   Student-t degrees of freedom: low → df=10 (lighter tails), high → df=4 (heavier tails).
+    -   Interval scaling: low → 0.92× (tighter), high → 1.12× (wider).
+-   **Fat-Tailed Distributions:** Supports Student-t, normal, mixture, and historical shock distributions. The calibrated model uses Student-t to capture the fat-tailed nature of cryptocurrency returns.
+-   **GBM Simulation:** Geometric Brownian Motion with drift correction (`-0.5σ²`) to produce martingale-consistent prediction intervals.
+-   **No-Peeking Backtesting:** For each of the 720 target bars, predictions use only `prices[:target_index]` — the model never sees future data. This prevents lookahead bias.
+-   **Automated Calibration:** Grid search over ~666 config combinations (lookback × df × scale × volatility model × distribution), selecting the config closest to 95% coverage with the lowest Winkler score.
+-   **Conformal Prediction (Optional):** An online mechanism that widens intervals based on the model's recent prediction errors, available as a toggle.
+-   **Prediction Persistence (Part C):** Every dashboard visit records the current prediction. On subsequent visits, past predictions are resolved against actual prices, building a growing timeline with live coverage tracking.
+
+## Live Dashboard
+
+The dashboard is deployed at **[btc-forecasterr.streamlit.app](https://btc-forecasterr.streamlit.app/)** and displays:
+
+-   Current BTCUSDT price and next-hour 95% prediction range.
+-   Interactive chart of the last 50 bars with the predicted range as a shaded ribbon.
+-   Backtest metrics (Coverage, Mean Width, Winkler Score) as headline numbers.
+-   Volatility regime, model configuration, and hourly sigma.
+-   Realized volatility chart (24h rolling window).
+-   **Prediction History:** A growing timeline of saved predictions showing hits (✅), misses (❌), and pending (⏳) outcomes with live coverage stats.
 
 ## Project Structure
 
 ```
-btc-forecaster/
-├── src/                    # Core forecasting, backtest, calibration, and evaluation logic
-│   ├── data_fetch.py       # Handles data retrieval from Binance Vision API
-│   ├── volatility.py       # Implements various volatility estimation models
-│   ├── gbm_simulation.py   # Compatibility shim for GBM simulation
-│   ├── prediction.py       # Main prediction interface, GBM, and interval calculation
-│   ├── backtest.py         # Backtesting framework and calibration engine
-│   ├── evaluation.py       # Metrics calculation (Coverage, Winkler Score, etc.)
-│   ├── calibration.py      # High-level calibration interface
-│   └── features.py         # Optional technical indicator generation for dashboard
-├── dashboard/app.py        # Streamlit web application for live predictions
-├── scripts/run_backtest.py # CLI script to execute the full backtesting pipeline
-├── config/                 # Configuration files for model parameters
-│   ├── default_config.py   # Loads default or calibrated model configurations
-│   └── model_config.yaml   # Human-readable model configuration (if used)
-├── data/                   # Stores generated backtest results and metrics
-│   ├── backtest_results.jsonl # Detailed prediction outputs
-│   └── backtest_metrics.json  # Summary of backtest performance metrics
-├── tests/                  # Unit tests for all core modules
-├── docs/METHODOLOGY.md     # Documentation on the forecasting methodology
-├── requirements.txt        # Project dependencies
-├── README.md               # Project documentation (this file)
-├── LICENSE                 # Project license
-└── .gitignore              # Git ignore file
+BTC-Forecaster/
+├── src/                        # Core forecasting logic
+│   ├── data_fetch.py           # Binance Vision API data retrieval
+│   ├── prediction.py           # GBM prediction, volatility models, regime detection
+│   ├── backtest.py             # No-peeking backtesting + calibration engine
+│   ├── evaluation.py           # Coverage, Mean Width, Winkler Score metrics
+│   ├── calibration.py          # High-level calibration interface
+│   ├── persistence.py          # Part C: prediction history storage & resolution
+│   ├── volatility.py           # Volatility model convenience wrappers
+│   ├── features.py             # Technical indicators (RSI, MACD, Bollinger, ATR)
+│   └── gbm_simulation.py       # GBM compatibility shim
+├── dashboard/
+│   └── app.py                  # Streamlit live dashboard
+├── scripts/
+│   └── run_backtest.py         # CLI: run full backtest + calibration pipeline
+├── config/
+│   ├── default_config.py       # Loads calibrated or fallback config
+│   └── model_config.yaml       # Human-readable config reference
+├── data/
+│   ├── backtest_results.jsonl   # 720 predictions (one per line)
+│   ├── backtest_metrics.json    # Performance metrics + winning config
+│   └── prediction_history.json  # Part C: persisted prediction log
+├── tests/                      # Unit tests (prediction, backtest, evaluation, etc.)
+├── docs/METHODOLOGY.md         # Forecasting methodology documentation
+├── .streamlit/config.toml      # Streamlit theme + deployment config
+├── requirements.txt            # Dependencies (numpy, pandas, streamlit, plotly, etc.)
+├── LICENSE                     # MIT License
+└── README.md
 ```
 
 ## Getting Started
@@ -66,41 +81,31 @@ btc-forecaster/
 ### Prerequisites
 
 -   Python 3.9+
--   `pip` (Python package installer)
+-   `pip`
 
 ### Installation
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/SakshamSinghal20/BTC-Forecaster.git
-    cd BTC-Forecaster
-    ```
-2.  Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+git clone https://github.com/SakshamSinghal20/BTC-Forecaster.git
+cd BTC-Forecaster
+pip install -r requirements.txt
+```
 
 ### Running the Backtest
 
-Execute the backtest script to evaluate the model\'s historical performance and calibrate optimal parameters. This will generate `backtest_results.jsonl` and `backtest_metrics.json` in the `data/` directory.
+Runs the full calibration grid search and generates `backtest_results.jsonl` + `backtest_metrics.json`:
 
 ```bash
 python scripts/run_backtest.py
 ```
 
-### Running the Live Dashboard
-
-Launch the Streamlit dashboard to view live BTC price predictions and backtest metrics.
+### Running the Dashboard Locally
 
 ```bash
 streamlit run dashboard/app.py
 ```
 
-For deployment on Streamlit Community Cloud or similar platforms, set the application entry point to `dashboard/app.py`.
-
 ### Running Tests
-
-To ensure the integrity and correctness of the codebase, run the unit tests:
 
 ```bash
 pytest
@@ -108,16 +113,17 @@ pytest
 
 ## Methodology
 
-The forecasting methodology is designed for transparency and robustness:
+1.  **Log Return Calculation:** `r_t = ln(P_t / P_{t-1})` — computed strictly from data available before the target bar to prevent lookahead bias.
+2.  **Volatility Estimation:** The next-hour σ is estimated using the calibrated model (GARCH(1,1) with lookback=168).
+3.  **Regime Classification:** Recent return intensity is compared against the 33rd/67th percentiles of the last 240 bars to classify the regime as low, medium, or high.
+4.  **Shock Quantiles:** 10,000 Student-t samples (regime-adjusted df) are drawn and normalized to unit variance. The 2.5th and 97.5th percentiles define the shock quantiles.
+5.  **Price Bound Reconstruction:** `bound = P_current × exp(-0.5σ² + σ × quantile)` — the GBM formula converting log-return quantiles back to USDT price bounds.
+6.  **Conformal Adjustment (Optional):** Intervals can be widened by the 95th percentile of recent conformity scores for guaranteed coverage.
 
-1.  **Log Return Calculation:** Historical hourly log returns are computed, strictly using data available before the target prediction bar to avoid lookahead bias.
-2.  **Volatility Estimation:** The next-hour volatility is estimated using the configured volatility model (rolling, EWMA, GARCH, or ensemble).
-3.  **Regime Classification:** The current volatility regime (low, medium, high) is identified relative to recent historical volatility.
-4.  **Shock Distribution Sampling:** Prediction interval quantiles are drawn from the configured shock distribution (Student-t, normal, mixture, or historical), with parameters adjusted based on the detected volatility regime.
-5.  **Price Bound Reconstruction:** Log-return quantiles are converted back to BTCUSDT price bounds.
-6.  **Conformal Adjustment (Optional):** The prediction bounds can be optionally widened using online conformal scores derived from previously resolved predictions, enhancing the reliability of the 95% coverage guarantee.
+## Bugs Spotted in Starter Notebook
 
-This modular approach allows for clear understanding and potential future enhancements, while maintaining a lightweight and deployable solution.
+-   The starter Colab uses daily USD/CHF data — it needed to be adapted for hourly BTCUSDT bars from Binance Vision.
+-   The original GBM simulation did not include regime-based parameter adjustment, which is critical for Bitcoin's volatility clustering.
 
 ## License
 
