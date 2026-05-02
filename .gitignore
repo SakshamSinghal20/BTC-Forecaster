@@ -8,4 +8,5 @@ venv/
 env/
 .env
 .streamlit/secrets.toml
+data/prediction_history.json.tmp
 

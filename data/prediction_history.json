@@ -1,0 +1,14 @@
+[
+  {
+    "predicted_at": "2026-05-02T06:22:49.343997+00:00",
+    "as_of_bar_close": "2026-05-02T05:59:59+00:00",
+    "target_time": "2026-05-02T06:59:59+00:00",
+    "current_price": 78174.0,
+    "lower": 77697.75173694364,
+    "upper": 78665.05027414388,
+    "volatility": 0.0029224330753962347,
+    "regime": "medium",
+    "actual": null,
+    "hit": null
+  }
+]
